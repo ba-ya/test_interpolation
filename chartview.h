@@ -51,12 +51,15 @@ public:
     }
 
 public slots:
-    void recv_ascan(std::shared_ptr<std::vector<QPointF>> a)
+    void recv_points(std::shared_ptr<std::vector<QPointF>> a)
     {
         QList<QPointF> b(a->begin(), a->end());
         m_series->replace(b);
-    }
+        // range
+        x_end = a->size();
+        on_x_update();
 
+    }
 
 private:
     void on_x_update()
@@ -68,7 +71,7 @@ private:
         xAxis->setRange(x_start, x_end);
         for (int i = 0; i < xtick_count; i++) {
             auto x = x_start + (x_end - x_start) / (xtick_count - 1) * i;
-            auto a = QString::number(x) + "mm";
+            auto a = QString::number(x);
             xAxis->append(a, x);
             xLabels.push_back(a);
         }

@@ -28,6 +28,7 @@ void MainWindow::init()
         ui->table->setItem(i, 0, new QTableWidgetItem(get_type_name(i)));
     }
     connect(ui->table, &QTableWidget::itemDoubleClicked, this, [this](QTableWidgetItem *item) {
+        ui->lineEdit_name->setText(item->text());
         do_something(item->text());
     });
 }
@@ -53,12 +54,14 @@ void MainWindow::do_something(QString type_name)
 void MainWindow::tcg_old_version()
 {
     qDebug() << "--" << __FUNCTION__;
+    std::vector<QPointF> points_1;
+    std::vector<QPointF> points_2;
     /// old version
-    const auto focus_laws = 64;
-    auto beampoints = 1024;
+    const auto focus_laws = 1;
+    auto beampoints = 110;
 
-    std::vector<double> deps = {0, 20, 100, 500};
-    std::vector<double> gains = {0, 10, 15, 20};
+    std::vector<double> deps = {0, 25, 50, 75, 100};
+    std::vector<double> gains = {0, 10, 15, 20, 15};
     auto cnt = gains.size();
 
     for (int i = 0; i < focus_laws; i++) {
@@ -72,12 +75,19 @@ void MainWindow::tcg_old_version()
             auto end_value = static_cast<int>(deps[k + 1]);
             for (int j = init_value; j < end_value; j++) {
                 curr_gain += inc_gain;
-                auto value = static_cast<uint16_t>(512 * pow(10, curr_gain / 20.0));
-            }
-            if (i == 0) {
-                qDebug().nospace() << "[" << init_value << "," << end_value << "), end_g: " << curr_gain;
+                points_1.push_back(QPointF(j, gains[k]));
+                points_2.push_back(QPointF(j, curr_gain));
             }
         }
     }
+    ui->chart_1->recv_points(std::make_shared<std::vector<QPointF>>(points_1));
+    ui->chart_2->recv_points(std::make_shared<std::vector<QPointF>>(points_2));
+}
+
+
+void MainWindow::on_btn_clear_released()
+{
+    ui->chart_1->clear_series();
+    ui->chart_2->clear_series();
 }
 

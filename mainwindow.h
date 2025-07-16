@@ -26,6 +26,9 @@ public:
     };
     QString get_type_name(int type);
 
+private slots:
+    void on_btn_clear_released();
+
 private:
     void do_something(QString type_name);
     void tcg_old_version();
