@@ -54,7 +54,7 @@ private:
         std::vector<int16_t> data, int cnt_in);
     /// ----------------other
     // data_in
-    std::vector<int16_t> get_data_in(int min, int max, int cnt_in);
+    std::vector<int16_t> get_data_in(int min, int max, int cnt_in, bool limit_range = true);
     // prepare points for chart
     std::vector<QPointF> to_points(const std::vector<int16_t> &vec);
     // debug

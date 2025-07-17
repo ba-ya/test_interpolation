@@ -55,13 +55,20 @@ border:none;</string>
       </widget>
       <widget class="QWidget" name="widget_2" native="true">
        <layout class="QGridLayout" name="gridLayout">
-        <item row="1" column="0">
+        <item row="2" column="0">
          <widget class="QTableWidget" name="table"/>
         </item>
-        <item row="0" column="0">
+        <item row="1" column="0">
          <widget class="QPushButton" name="btn_clear">
           <property name="text">
            <string>清除图像</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QCheckBox" name="cb_scatter">
+          <property name="text">
+           <string>散点图</string>
           </property>
          </widget>
         </item>

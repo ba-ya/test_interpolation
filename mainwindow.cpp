@@ -47,8 +47,8 @@ QString MainWindow::get_type_name(int type)
 
 void MainWindow::do_something(QString type_name)
 {
-    auto points = 1024;
-    std::vector<double> deps = {300, 500, 700, 900};
+    auto points = 100;
+    std::vector<double> deps = {30, 50, 70, 90};
     std::vector<double> gains = {10, 75, 20, 95};
     if (type_name == get_type_name(TCG_Old)) {
         tcg_old_version(deps, gains, points);
@@ -89,8 +89,9 @@ void MainWindow::tcg_old_version(std::vector<double> deps, std::vector<double> g
         points_2.push_back(QPointF(j, gains[cnt - 1]));
     }
     // debug_vector(points_2);
-    ui->chart_1->recv_points(std::make_shared<std::vector<QPointF>>(points_1), false);
-    ui->chart_2->recv_points(std::make_shared<std::vector<QPointF>>(points_2), false);
+    bool is_scatt = ui->cb_scatter->isChecked();
+    ui->chart_1->recv_points(std::make_shared<std::vector<QPointF>>(points_1), is_scatt);
+    ui->chart_2->recv_points(std::make_shared<std::vector<QPointF>>(points_2), is_scatt);
 }
 
 void MainWindow::tcg_linear_version(std::vector<double> deps, std::vector<double> gains, int cnt_out)
@@ -105,7 +106,8 @@ void MainWindow::tcg_linear_version(std::vector<double> deps, std::vector<double
         result.push_back(QPointF(i, gains.back()));
     }
     // debug_vector(result);
-    ui->chart_2->recv_points(std::make_shared<std::vector<QPointF>>(result), false);
+    bool is_scatt = ui->cb_scatter->isChecked();
+    ui->chart_2->recv_points(std::make_shared<std::vector<QPointF>>(result), is_scatt);
 }
 
 std::vector<QPointF> MainWindow::linear_interpolate(std::vector<double> x, std::vector<double> y, int cnt_out)
@@ -158,7 +160,7 @@ void MainWindow::ndt_view_dscan()
 {
     auto cnt_in = 700;
     auto min = 10, max = 75;
-    std::vector<int16_t> data_in = get_data_in(min, max, cnt_in);
+    std::vector<int16_t> data_in = get_data_in(min, max, cnt_in, false);
     auto points_1 = to_points(data_in);
 
     auto cnt_out = 120;
@@ -166,8 +168,9 @@ void MainWindow::ndt_view_dscan()
     auto data_out = on_beam_interpolate(0, range, data_in, 0, range, cnt_out - 1);
     auto points_2 = to_points(data_out);
 
-    ui->chart_1->recv_points(std::make_shared<std::vector<QPointF>>(points_1));
-    ui->chart_2->recv_points(std::make_shared<std::vector<QPointF>>(points_2));
+    bool is_scatt = ui->cb_scatter->isChecked();
+    ui->chart_1->recv_points(std::make_shared<std::vector<QPointF>>(points_1), is_scatt);
+    ui->chart_2->recv_points(std::make_shared<std::vector<QPointF>>(points_2), is_scatt);
 }
 
 std::vector<int16_t> MainWindow::on_beam_interpolate(
@@ -220,8 +223,9 @@ void MainWindow::smp_linkcl()
     auto data_out = on_data_interpolate(range, wave_speed, compress, cnt_out, data_in, cnt_in);
     auto points_2 = to_points(data_out);
 
-    ui->chart_1->recv_points(std::make_shared<std::vector<QPointF>>(points_1));
-    ui->chart_2->recv_points(std::make_shared<std::vector<QPointF>>(points_2));
+    bool is_scatt = ui->cb_scatter->isChecked();
+    ui->chart_1->recv_points(std::make_shared<std::vector<QPointF>>(points_1), is_scatt);
+    ui->chart_2->recv_points(std::make_shared<std::vector<QPointF>>(points_2), is_scatt);
 }
 
 std::vector<int16_t> MainWindow::on_data_interpolate(
@@ -263,21 +267,25 @@ std::vector<int16_t> MainWindow::on_data_interpolate(
     return buffer;
 }
 
-std::vector<int16_t> MainWindow::get_data_in(int min, int max, int cnt_in)
+std::vector<int16_t> MainWindow::get_data_in(int min, int max, int cnt_in, bool limit_range)
 {
     std::vector<int16_t> data_in;
 
     // random
     std::random_device rd;                      // 用于种子
     std::mt19937 gen(rd());                     // Mersenne Twister 随机数引擎
-    std::normal_distribution<> dist(50, 10);    // 正态分布 均值50，标准差10
+    std::normal_distribution<> dist(50, 40);    // 正态分布 均值50，标准差10
 
     for (int i = 0; i < cnt_in; ++i) {
-        // 拒绝采样
         int16_t y;
-        do {
+        if (limit_range) {
+            // 拒绝采样
+            do {
+                y = dist(gen);
+            } while (y < min || y > max);
+        } else {
             y = dist(gen);
-        } while (y < min || y > max);
+        }
         data_in.push_back(y);
     }
     return data_in;
