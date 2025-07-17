@@ -31,7 +31,14 @@ private slots:
 
 private:
     void do_something(QString type_name);
-    void tcg_old_version();
+    void tcg_old_version(std::vector<double> deps, std::vector<double> gains, int cnt_out);
+    void tcg_linear_version(std::vector<double> deps, std::vector<double> gains, int cnt_out);
+    // only fit monotonical incremental
+    std::vector<QPointF> linear_interpolate(std::vector<double> x, std::vector<double> y, int cnt_out);
+    // adj
+    void fill_zero(std::vector<double> &x, std::vector<double> &y);
+    // debug
+    void debug_vector(std::vector<QPointF> &vec);
 
 private:
     Ui::MainWindow *ui;

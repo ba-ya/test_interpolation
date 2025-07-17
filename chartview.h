@@ -8,6 +8,7 @@
 #include <QScatterSeries>
 #include <QCategoryAxis>
 #include <QGraphicsLayout>
+#include <QScatterSeries>
 
 #if (QT_VERSION <= QT_VERSION_CHECK(6,0,0))
 QT_CHARTS_USE_NAMESPACE
@@ -48,15 +49,22 @@ public:
 
     void clear_series() {
         m_series->clear();
+        m_scatter->clear();
     }
 
 public slots:
-    void recv_points(std::shared_ptr<std::vector<QPointF>> a)
+    void recv_points(std::shared_ptr<std::vector<QPointF>> a, bool show_scatter = true)
     {
         QList<QPointF> b(a->begin(), a->end());
         m_series->replace(b);
+        if (show_scatter) {
+            m_scatter->replace(b);
+        } else {
+            m_scatter->clear();
+        }
+
         // range
-        x_end = a->size();
+        x_end = a->size() - 1;
         on_x_update();
 
     }
@@ -113,11 +121,17 @@ private:
         m_chart->addSeries(m_series);
         m_series->attachAxis(xAxis);
         m_series->attachAxis(yAxis);
+
+        m_scatter = new QScatterSeries();
+        m_chart->addSeries(m_scatter);
+        m_scatter->attachAxis(xAxis);
+        m_scatter->attachAxis(yAxis);
     }
 
 private:
     QChart* m_chart;
     QLineSeries* m_series;
+    QScatterSeries *m_scatter;
     QCategoryAxis* xAxis;
     QCategoryAxis* yAxis;
 
