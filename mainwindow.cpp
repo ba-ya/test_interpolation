@@ -40,6 +40,7 @@ QString MainWindow::get_type_name(int type)
     case TCG_Old: return "TCG_Old";
     case TCG_New: return "TCG_New";
     case Ndt_View_Dscan: return "Ndt_View_Dscan";
+    case Smp_Linkcl: return "Smp_Linkcl";
     default: return "Unkown";
     }
 }
@@ -55,6 +56,8 @@ void MainWindow::do_something(QString type_name)
         tcg_linear_version(deps, gains, points);
     } else if (type_name == get_type_name(Ndt_View_Dscan)) {
         ndt_view_dscan();
+    } else if (type_name == get_type_name(Smp_Linkcl)) {
+        smp_linkcl();
     }
 }
 
@@ -153,32 +156,15 @@ void MainWindow::fill_zero(std::vector<double> &x, std::vector<double> &y)
 
 void MainWindow::ndt_view_dscan()
 {
-    std::vector<QPointF> points_1;
-    std::vector<QPointF> points_2;
-    std::vector<int16_t> data_in;
-    // random
-    std::random_device rd;                              // 用于种子
-    std::mt19937 gen(rd());                             // Mersenne Twister 随机数引擎
-    // std::uniform_int_distribution<> dist(0, 99);        // 均匀分布 [0, 99]
-    std::normal_distribution<> dist(50, 10);        // 正态分布 均值50，标准差10
-
     auto cnt_in = 700;
-    auto cnt_out = 120;
     auto min = 10, max = 75;
-    for (int i = 0; i < cnt_in; ++i) {
-        // 拒绝采样
-        int16_t y;
-        do {
-            y = dist(gen);
-        } while (y < min || y > max);
-        data_in.push_back(y);
-        points_1.push_back(QPoint(i, y));
-    }
+    std::vector<int16_t> data_in = get_data_in(min, max, cnt_in);
+    auto points_1 = to_points(data_in);
 
-    auto rst = on_beam_interpolate(0, 100, data_in, 0, 100, cnt_out - 1);
-    for (int i = 0; i < rst.size(); ++i) {
-        points_2.push_back(QPointF(i, rst[i]));
-    }
+    auto cnt_out = 120;
+    auto range = 100;
+    auto data_out = on_beam_interpolate(0, range, data_in, 0, range, cnt_out - 1);
+    auto points_2 = to_points(data_out);
 
     ui->chart_1->recv_points(std::make_shared<std::vector<QPointF>>(points_1));
     ui->chart_2->recv_points(std::make_shared<std::vector<QPointF>>(points_2));
@@ -220,11 +206,97 @@ std::vector<int16_t> MainWindow::on_beam_interpolate(
     return data_out;
 }
 
+void MainWindow::smp_linkcl()
+{
+    auto cnt_in = 700;
+    auto min = 10, max = 75;
+    std::vector<int16_t> data_in = get_data_in(min, max, cnt_in);
+    auto points_1 = to_points(data_in);
+
+    auto cnt_out = 120;
+    double range = 100, wave_speed = 5920;
+    int compress = 1;
+    range = wave_speed / 1000 * (compress * 10 / 1000.0) * cnt_in;
+    auto data_out = on_data_interpolate(range, wave_speed, compress, cnt_out, data_in, cnt_in);
+    auto points_2 = to_points(data_out);
+
+    ui->chart_1->recv_points(std::make_shared<std::vector<QPointF>>(points_1));
+    ui->chart_2->recv_points(std::make_shared<std::vector<QPointF>>(points_2));
+}
+
+std::vector<int16_t> MainWindow::on_data_interpolate(
+    double domain, double wave_speed, int compress,
+    int cnt_out,
+    std::vector<int16_t> data, int cnt_in)
+{
+    int delta = 10; // usb, 10ns
+    // 实际范围内有多少点，对应插值前的数据：data
+    // wave_speed(m/s) -> mm/ms -> mm/ms * (1ms / 1000us) -> mm/us
+    // delta(ns) -> ns * 0.001us/ns
+    // ohter words, mm/ms->mm/us(小单位->大单位, /1000)
+    // ohter words, ns->us(小单位->大单位, /1000)
+    auto a = wave_speed / 1000 * (compress * delta / 1000.0); // mm, 2个点的间隔
+    auto b = domain / (cnt_out - 1);
+    qDebug() << "domain: " << domain << "cnt_out: " << cnt_out << ", cnt_in: " << cnt_in << ", a: " << a << ", b:" << b;
+
+    std::vector<int16_t> buffer;
+    buffer.resize(cnt_out);
+    for (auto i = 0; i < cnt_out; i++)
+    {
+        // 线性插值
+        auto pos = i * b;
+        auto index_low = static_cast<int>(pos / a);
+        auto index_high = index_low + 1;
+
+        if (index_low >= cnt_in - 1)
+        {
+            buffer[i] = data[cnt_in - 1];
+        }
+        else
+        {
+            auto x = pos;
+            auto x1 = index_low * a;
+            auto x2 = index_high * a;
+            buffer[i] = (x - x2) / (x1 - x2) * data[index_low] + (x - x1) / (x2 - x1) * data[index_high];
+        }
+    }
+    return buffer;
+}
+
+std::vector<int16_t> MainWindow::get_data_in(int min, int max, int cnt_in)
+{
+    std::vector<int16_t> data_in;
+
+    // random
+    std::random_device rd;                      // 用于种子
+    std::mt19937 gen(rd());                     // Mersenne Twister 随机数引擎
+    std::normal_distribution<> dist(50, 10);    // 正态分布 均值50，标准差10
+
+    for (int i = 0; i < cnt_in; ++i) {
+        // 拒绝采样
+        int16_t y;
+        do {
+            y = dist(gen);
+        } while (y < min || y > max);
+        data_in.push_back(y);
+    }
+    return data_in;
+}
+
 void MainWindow::debug_vector(std::vector<QPointF> &vec)
 {
     for (int i = 0; i < vec.size(); ++i) {
         qDebug() << i << vec[i];
     }
+}
+
+std::vector<QPointF> MainWindow::to_points(const std::vector<int16_t> &vec)
+{
+    std::vector<QPointF> points;
+    for (int i = 0; i < vec.size(); ++i) {
+        points.push_back(QPointF(i, vec[i]));
+    }
+    return points;
 }
 
 void MainWindow::on_btn_clear_released()
