@@ -53,7 +53,7 @@ public:
     }
 
 public slots:
-    void recv_points(std::shared_ptr<std::vector<QPointF>> a, bool show_scatter = true)
+    void recv_points(std::shared_ptr<std::vector<QPointF>> a, bool show_scatter = false)
     {
         QList<QPointF> b(a->begin(), a->end());
         m_series->replace(b);

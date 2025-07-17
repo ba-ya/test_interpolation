@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
+#include <random>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -38,6 +39,7 @@ QString MainWindow::get_type_name(int type)
     switch(type) {
     case TCG_Old: return "TCG_Old";
     case TCG_New: return "TCG_New";
+    case Ndt_View_Dscan: return "Ndt_View_Dscan";
     default: return "Unkown";
     }
 }
@@ -51,6 +53,8 @@ void MainWindow::do_something(QString type_name)
         tcg_old_version(deps, gains, points);
     } else if (type_name == get_type_name(TCG_New)) {
         tcg_linear_version(deps, gains, points);
+    } else if (type_name == get_type_name(Ndt_View_Dscan)) {
+        ndt_view_dscan();
     }
 }
 
@@ -145,6 +149,75 @@ void MainWindow::fill_zero(std::vector<double> &x, std::vector<double> &y)
     }
     x.insert(x.begin(), 0);
     y.insert(y.begin(), 0);
+}
+
+void MainWindow::ndt_view_dscan()
+{
+    std::vector<QPointF> points_1;
+    std::vector<QPointF> points_2;
+    std::vector<int16_t> data_in;
+    // random
+    std::random_device rd;                              // 用于种子
+    std::mt19937 gen(rd());                             // Mersenne Twister 随机数引擎
+    // std::uniform_int_distribution<> dist(0, 99);        // 均匀分布 [0, 99]
+    std::normal_distribution<> dist(50, 10);        // 正态分布 均值50，标准差10
+
+    auto cnt_in = 700;
+    auto cnt_out = 120;
+    auto min = 10, max = 75;
+    for (int i = 0; i < cnt_in; ++i) {
+        // 拒绝采样
+        int16_t y;
+        do {
+            y = dist(gen);
+        } while (y < min || y > max);
+        data_in.push_back(y);
+        points_1.push_back(QPoint(i, y));
+    }
+
+    auto rst = on_beam_interpolate(0, 100, data_in, 0, 100, cnt_out - 1);
+    for (int i = 0; i < rst.size(); ++i) {
+        points_2.push_back(QPointF(i, rst[i]));
+    }
+
+    ui->chart_1->recv_points(std::make_shared<std::vector<QPointF>>(points_1));
+    ui->chart_2->recv_points(std::make_shared<std::vector<QPointF>>(points_2));
+}
+
+std::vector<int16_t> MainWindow::on_beam_interpolate(
+    double start_in, double end_in, const std::vector<int16_t> &data_in,
+    double start_out, double end_out, int cnt_out
+    )
+{
+    std::vector<int16_t> data_out;
+    if (data_in.empty()) {
+        return data_out;
+    }
+    if (cnt_out <= 0) {
+        return data_out;
+    }
+    data_out.reserve(cnt_out + 1);
+    for (auto i = 0; i < cnt_out + 1; i++) {
+        auto x = start_out + (end_out - start_out) * i / cnt_out;
+        if (x < start_in || x > end_in) {
+            data_out.push_back(0);
+            continue;
+        }
+        auto d = (end_in - start_in) / (data_in.size() - 1);
+        int id_1 = (x - start_in) / d;
+        int id_2 = id_1 + 1;
+        if (id_2 >= static_cast<int>(data_in.size())) {
+            data_out.push_back(data_in.back());
+            continue;
+        }
+        auto x1 = start_in + id_1 * d;
+        auto x2 = start_in + (id_1 + 1) * d;
+        // 标准公式的变形, 加权形式
+        // (x - x1) / (x2 - x1) * y1 + (x2 - x) / (x2 - x1) * y2
+        auto a = (x - x2) / (x1 - x2) * data_in[id_1] + (x - x1) / (x2 - x1) * data_in[id_2];
+        data_out.push_back(a);
+    }
+    return data_out;
 }
 
 void MainWindow::debug_vector(std::vector<QPointF> &vec)
