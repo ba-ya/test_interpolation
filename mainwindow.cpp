@@ -155,12 +155,12 @@ void MainWindow::ndt_view_dscan()
 {
     auto cnt_in = 700;
     auto min = 10, max = 75;
-    std::vector<int16_t> data_in = get_data_in(min, max, cnt_in, false);
+    std::vector<int16_t> data_in = get_data_in(min, max, cnt_in);
     auto points_1 = to_points(data_in);
 
     auto cnt_out = 120;
     auto range = 100;
-    auto data_out = on_beam_interpolate(0, range, data_in, 0, range, cnt_out - 1);
+    auto data_out = on_beam_interpolate(0, range, data_in, 0, range, cnt_out);
     auto points_2 = to_points(data_out);
 
     bool is_scatt = ui->cb_scatter->isChecked();
@@ -180,13 +180,16 @@ std::vector<int16_t> MainWindow::on_beam_interpolate(
     if (cnt_out <= 0) {
         return data_out;
     }
-    data_out.reserve(cnt_out + 1);
-    for (auto i = 0; i < cnt_out + 1; i++) {
-        auto x = start_out + (end_out - start_out) * i / cnt_out;
+    data_out.reserve(cnt_out);
+    auto step = (end_out - start_out) / (cnt_out - 1);
+    for (auto i = 0; i < cnt_out; i++) {
+        // out
+        auto x = start_out + step * i;
         if (x < start_in || x > end_in) {
             data_out.push_back(0);
             continue;
         }
+        // in
         auto d = (end_in - start_in) / (data_in.size() - 1);
         int id_1 = (x - start_in) / d;
         int id_2 = id_1 + 1;
@@ -197,7 +200,7 @@ std::vector<int16_t> MainWindow::on_beam_interpolate(
         auto x1 = start_in + id_1 * d;
         auto x2 = start_in + (id_1 + 1) * d;
         // 标准公式的变形, 加权形式
-        // (x - x1) / (x2 - x1) * y1 + (x2 - x) / (x2 - x1) * y2
+        // (x2 - x) / (x2 - x1) * y1 + (x - x1) / (x2 - x1) * y2
         auto a = (x - x2) / (x1 - x2) * data_in[id_1] + (x - x1) / (x2 - x1) * data_in[id_2];
         data_out.push_back(a);
     }
