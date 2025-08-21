@@ -21,12 +21,18 @@ void MainWindow::init()
     ui->table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     // edit
     ui->table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    QStringList funcs = {
+        "tcg_old_version",
+        "tcg_linear_version",
+        "ndt_view_dscan",
+        "smp_linkcl",
+    };
     // row
-    auto cnt_row = CntType;
+    auto cnt_row = funcs.size();
     ui->table->setRowCount(cnt_row);
     ui->table->setColumnCount(1);
-    for (int i = 0; i < CntType; ++i) {
-        ui->table->setItem(i, 0, new QTableWidgetItem(get_type_name(i)));
+    for (int i = 0; i < cnt_row; ++i) {
+        ui->table->setItem(i, 0, new QTableWidgetItem(funcs[i]));
     }
     connect(ui->table, &QTableWidget::itemDoubleClicked, this, [this](QTableWidgetItem *item) {
         ui->lineEdit_name->setText(item->text());
@@ -34,29 +40,18 @@ void MainWindow::init()
     });
 }
 
-QString MainWindow::get_type_name(int type)
-{
-    switch(type) {
-    case TCG_Old: return "TCG_Old";
-    case TCG_New: return "TCG_New";
-    case Ndt_View_Dscan: return "Ndt_View_Dscan";
-    case Smp_Linkcl: return "Smp_Linkcl";
-    default: return "Unkown";
-    }
-}
-
 void MainWindow::do_something(QString type_name)
 {
     auto points = 100;
     std::vector<double> deps = {30, 50, 70, 90};
     std::vector<double> gains = {10, 75, 20, 95};
-    if (type_name == get_type_name(TCG_Old)) {
+    if (type_name == "tcg_old_version") {
         tcg_old_version(deps, gains, points);
-    } else if (type_name == get_type_name(TCG_New)) {
+    } else if (type_name == "tcg_linear_version") {
         tcg_linear_version(deps, gains, points);
-    } else if (type_name == get_type_name(Ndt_View_Dscan)) {
+    } else if (type_name == "ndt_view_dscan") {
         ndt_view_dscan();
-    } else if (type_name == get_type_name(Smp_Linkcl)) {
+    } else if (type_name == "smp_linkcl") {
         smp_linkcl();
     }
 }
@@ -274,7 +269,7 @@ std::vector<int16_t> MainWindow::get_data_in(int min, int max, int cnt_in, bool 
     // random
     std::random_device rd;                      // 用于种子
     std::mt19937 gen(rd());                     // Mersenne Twister 随机数引擎
-    std::normal_distribution<> dist(50, 40);    // 正态分布 均值50，标准差10
+    std::normal_distribution<> dist(50, 40);    // 正态分布 均值50，标准差40, 即范围为(50-40, 50+40)
 
     for (int i = 0; i < cnt_in; ++i) {
         int16_t y;

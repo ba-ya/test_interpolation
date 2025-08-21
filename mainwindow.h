@@ -18,16 +18,6 @@ public:
     ~MainWindow();
     void init();
 
-    enum Types{
-        TCG_Old,
-        TCG_New,
-        Ndt_View_Dscan,
-        Smp_Linkcl,
-
-        CntType,
-    };
-    QString get_type_name(int type);
-
 private slots:
     void on_btn_clear_released();
 
